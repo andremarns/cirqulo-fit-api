@@ -33,18 +33,18 @@ async def get_workouts(
         
         return [
             WorkoutResponse(
-                id=workout[0],
-                name=workout[1],
-                description=workout[2],
-                category=workout[3],
-                level=workout[4],
-                duration=workout[5],
-                exercises_count=workout[6],
-                xp_reward=workout[7],
-                user_id=workout[8],
-                is_active=workout[9],
-                created_at=workout[10],
-                updated_at=workout[11]
+                id=workout['id'],
+                name=workout['name'],
+                description=workout['description'],
+                category=workout['category'],
+                level=workout['level'],
+                duration=workout['duration'],
+                exercises_count=workout['exercises_count'],
+                xp_reward=workout['xp_reward'],
+                user_id=workout['user_id'],
+                is_active=workout['is_active'],
+                created_at=workout['created_at'],
+                updated_at=workout['updated_at']
             )
             for workout in workouts
         ]
@@ -91,18 +91,18 @@ async def create_workout(
             )
         
         return WorkoutResponse(
-            id=workout_data[0],
-            name=workout_data[1],
-            description=workout_data[2],
-            category=workout_data[3],
-            level=workout_data[4],
-            duration=workout_data[5],
-            exercises_count=workout_data[6],
-            xp_reward=workout_data[7],
-            user_id=workout_data[8],
-            is_active=workout_data[9],
-            created_at=workout_data[10],
-            updated_at=workout_data[11]
+            id=workout_data['id'],
+            name=workout_data['name'],
+            description=workout_data['description'],
+            category=workout_data['category'],
+            level=workout_data['level'],
+            duration=workout_data['duration'],
+            exercises_count=workout_data['exercises_count'],
+            xp_reward=workout_data['xp_reward'],
+            user_id=workout_data['user_id'],
+            is_active=workout_data['is_active'],
+            created_at=workout_data['created_at'],
+            updated_at=workout_data['updated_at']
         )
 
 @router.get("/{workout_id}", response_model=WorkoutResponse)
@@ -113,7 +113,8 @@ async def get_workout(
     """Buscar treino específico"""
     with db.get_cursor() as cursor:
         cursor.execute("""
-            SELECT * FROM workouts WHERE id = %s AND user_id = %s
+            SELECT id, name, description, category, level, duration, exercises_count, xp_reward, user_id, is_active, created_at, updated_at
+            FROM workouts WHERE id = %s AND user_id = %s
         """, (workout_id, current_user.id))
         
         workout = cursor.fetchone()
@@ -124,18 +125,18 @@ async def get_workout(
             )
         
         return WorkoutResponse(
-            id=workout[0],
-            name=workout[1],
-            description=workout[2],
-            category=workout[3],
-            level=workout[4],
-            duration=workout[5],
-            exercises_count=workout[6],
-            xp_reward=workout[7],
-            user_id=workout[8],
-            is_active=workout[9],
-            created_at=workout[10],
-            updated_at=workout[11]
+            id=workout['id'],
+            name=workout['name'],
+            description=workout['description'],
+            category=workout['category'],
+            level=workout['level'],
+            duration=workout['duration'],
+            exercises_count=workout['exercises_count'],
+            xp_reward=workout['xp_reward'],
+            user_id=workout['user_id'],
+            is_active=workout['is_active'],
+            created_at=workout['created_at'],
+            updated_at=workout['updated_at']
         )
 
 @router.put("/{workout_id}", response_model=WorkoutResponse)
@@ -163,7 +164,6 @@ async def update_workout(
             SET name = %s, description = %s, category = %s, level = %s, 
                 duration = %s, exercises_count = %s, xp_reward = %s, updated_at = %s
             WHERE id = %s AND user_id = %s
-            RETURNING id, name, description, category, level, duration, exercises_count, xp_reward, user_id, is_active, created_at, updated_at
         """, (
             workout.name,
             workout.description,
@@ -177,20 +177,33 @@ async def update_workout(
             current_user.id
         ))
         
+        # Buscar o treino atualizado
+        cursor.execute("""
+            SELECT id, name, description, category, level, duration, exercises_count, xp_reward, user_id, is_active, created_at, updated_at
+            FROM workouts 
+            WHERE id = %s AND user_id = %s
+        """, (workout_id, current_user.id))
+        
         workout_data = cursor.fetchone()
+        if not workout_data:
+            raise HTTPException(
+                status_code=500,
+                detail="Erro ao atualizar treino"
+            )
+        
         return WorkoutResponse(
-            id=workout_data[0],
-            name=workout_data[1],
-            description=workout_data[2],
-            category=workout_data[3],
-            level=workout_data[4],
-            duration=workout_data[5],
-            exercises_count=workout_data[6],
-            xp_reward=workout_data[7],
-            user_id=workout_data[8],
-            is_active=workout_data[9],
-            created_at=workout_data[10],
-            updated_at=workout_data[11]
+            id=workout_data['id'],
+            name=workout_data['name'],
+            description=workout_data['description'],
+            category=workout_data['category'],
+            level=workout_data['level'],
+            duration=workout_data['duration'],
+            exercises_count=workout_data['exercises_count'],
+            xp_reward=workout_data['xp_reward'],
+            user_id=workout_data['user_id'],
+            is_active=workout_data['is_active'],
+            created_at=workout_data['created_at'],
+            updated_at=workout_data['updated_at']
         )
 
 @router.delete("/{workout_id}")
@@ -222,19 +235,19 @@ async def get_workout_stats(
         cursor.execute("""
             SELECT COUNT(*) FROM workouts WHERE user_id = %s
         """, (current_user.id,))
-        total_workouts = cursor.fetchone()[0]
+        total_workouts = cursor.fetchone()['count']
         
         # Treinos ativos
         cursor.execute("""
             SELECT COUNT(*) FROM workouts WHERE user_id = %s AND is_active = true
         """, (current_user.id,))
-        active_workouts = cursor.fetchone()[0]
+        active_workouts = cursor.fetchone()['count']
         
         # XP total
         cursor.execute("""
             SELECT COALESCE(SUM(xp_reward), 0) FROM workouts WHERE user_id = %s
         """, (current_user.id,))
-        total_xp = cursor.fetchone()[0]
+        total_xp = cursor.fetchone()['coalesce']
         
         return WorkoutStatsResponse(
             total_workouts=total_workouts,
@@ -269,8 +282,8 @@ async def get_weekly_progress(
         week_start = datetime.now() - timedelta(days=7)
         week_end = datetime.now()
         
-        total_sessions = sum(row[1] for row in progress_data)
-        total_xp = sum(row[2] or 0 for row in progress_data)
+        total_sessions = sum(row['count'] for row in progress_data)
+        total_xp = sum(row['xp'] or 0 for row in progress_data)
         
         return WeeklyProgressResponse(
             week_start=week_start,
@@ -282,9 +295,9 @@ async def get_weekly_progress(
             level=1,  # Implementar se necessário
             daily_progress=[
                 {
-                    "date": str(row[0]),
-                    "workouts": row[1],
-                    "xp_earned": row[2] or 0
+                    "date": str(row['date']),
+                    "workouts": row['count'],
+                    "xp_earned": row['xp'] or 0
                 }
                 for row in progress_data
             ]

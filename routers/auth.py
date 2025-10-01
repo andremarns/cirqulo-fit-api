@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -32,18 +31,21 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 def get_user_by_email(email: str):
     with db.get_cursor() as cursor:
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        cursor.execute("""
+            SELECT id, name, email, hashed_password, gender, is_active, created_at, updated_at 
+            FROM users WHERE email = %s
+        """, (email,))
         user_data = cursor.fetchone()
         if user_data:
             return User(
-                id=user_data[0],
-                name=user_data[1],
-                email=user_data[2],
-                hashed_password=user_data[3],
-                gender=user_data[4],
-                is_active=user_data[5],
-                created_at=user_data[6],
-                updated_at=user_data[7]
+                id=user_data['id'],
+                name=user_data['name'],
+                email=user_data['email'],
+                hashed_password=user_data['hashed_password'],
+                gender=user_data['gender'],
+                is_active=user_data['is_active'],
+                created_at=user_data['created_at'],
+                updated_at=user_data['updated_at']
             )
         return None
 
@@ -76,38 +78,41 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate):
-    db_user = get_user_by_email(user.email)
-    if db_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Email already registered"
-        )
-    
-    hashed_password = get_password_hash(user.password)
-    
-    with db.get_cursor() as cursor:
-        # Inserir usuário
-        cursor.execute("""
-            INSERT INTO users (name, email, hashed_password, gender, is_active, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            user.name,
-            user.email,
-            hashed_password,
-            user.gender,
-            True,
-            datetime.utcnow(),
-            datetime.utcnow()
-        ))
+    try:
+        # Verificar se usuário já existe
+        db_user = get_user_by_email(user.email)
+        if db_user:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already registered"
+            )
         
-        # Buscar o usuário criado
-        cursor.execute("""
-            SELECT id, name, email, gender, is_active, created_at, updated_at
-            FROM users 
-            WHERE email = %s
-        """, (user.email,))
+        hashed_password = get_password_hash(user.password)
         
+        with db.get_cursor() as cursor:
+            # Inserir usuário
+            cursor.execute("""
+                INSERT INTO users (name, email, hashed_password, gender, is_active, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                user.name,
+                user.email,
+                hashed_password,
+                user.gender,
+                True,
+                datetime.utcnow(),
+                datetime.utcnow()
+            ))
+            
+            # Buscar o usuário criado
+            cursor.execute("""
+                SELECT id, name, email, gender, is_active, created_at, updated_at
+                FROM users 
+                WHERE email = %s
+            """, (user.email,))
+            
         user_data = cursor.fetchone()
+        
         if not user_data:
             raise HTTPException(
                 status_code=500,
@@ -115,13 +120,21 @@ async def register(user: UserCreate):
             )
         
         return UserResponse(
-            id=user_data[0],
-            name=user_data[1],
-            email=user_data[2],
-            gender=user_data[3],
-            is_active=user_data[4],
-            created_at=user_data[5],
-            updated_at=user_data[6]
+            id=user_data['id'],
+            name=user_data['name'],
+            email=user_data['email'],
+            gender=user_data['gender'],
+            is_active=user_data['is_active'],
+            created_at=user_data['created_at'],
+            updated_at=user_data['updated_at']
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro interno do servidor: {str(e)}"
         )
 
 @router.post("/login", response_model=Token)

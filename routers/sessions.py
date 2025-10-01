@@ -61,16 +61,16 @@ async def start_workout_session(
             )
         
         return WorkoutSessionResponse(
-            id=session_result[0],
-            user_id=session_result[1],
-            workout_id=session_result[2],
-            started_at=session_result[3],
-            completed_at=session_result[4],
-            duration=session_result[5],
-            xp_earned=session_result[6],
-            is_completed=session_result[7],
-            created_at=session_result[8],
-            updated_at=session_result[9]
+            id=session_result['id'],
+            user_id=session_result['user_id'],
+            workout_id=session_result['workout_id'],
+            started_at=session_result['started_at'],
+            completed_at=session_result['completed_at'],
+            duration=session_result['duration'],
+            xp_earned=session_result['xp_earned'],
+            is_completed=session_result['is_completed'],
+            created_at=session_result['created_at'],
+            updated_at=session_result['updated_at']
         )
 
 @router.patch("/{session_id}/complete", response_model=WorkoutSessionResponse)
@@ -93,7 +93,7 @@ async def complete_workout_session(
             )
         
         # Calcular duração e XP
-        started_at = session[3]
+        started_at = session['started_at']
         completed_at = datetime.utcnow()
         duration = int((completed_at - started_at).total_seconds() / 60)  # em minutos
         
@@ -101,7 +101,7 @@ async def complete_workout_session(
         cursor.execute("""
             SELECT COUNT(*) FROM workout_exercises WHERE session_id = %s
         """, (session_id,))
-        exercise_count = cursor.fetchone()[0]
+        exercise_count = cursor.fetchone()['count']
         xp_earned = duration * 2 + exercise_count * 10
         
         # Atualizar sessão
@@ -132,16 +132,16 @@ async def complete_workout_session(
             )
         
         return WorkoutSessionResponse(
-            id=session_data[0],
-            user_id=session_data[1],
-            workout_id=session_data[2],
-            started_at=session_data[3],
-            completed_at=session_data[4],
-            duration=session_data[5],
-            xp_earned=session_data[6],
-            is_completed=session_data[7],
-            created_at=session_data[8],
-            updated_at=session_data[9]
+            id=session_data['id'],
+            user_id=session_data['user_id'],
+            workout_id=session_data['workout_id'],
+            started_at=session_data['started_at'],
+            completed_at=session_data['completed_at'],
+            duration=session_data['duration'],
+            xp_earned=session_data['xp_earned'],
+            is_completed=session_data['is_completed'],
+            created_at=session_data['created_at'],
+            updated_at=session_data['updated_at']
         )
 
 @router.post("/{session_id}/exercises", response_model=WorkoutExerciseResponse)
@@ -194,16 +194,16 @@ async def add_exercise_to_session(
             )
         
         return WorkoutExerciseResponse(
-            id=exercise_result[0],
-            session_id=exercise_result[1],
-            exercise_name=exercise_result[2],
-            sets=exercise_result[3],
-            reps=exercise_result[4],
-            weight=exercise_result[5],
-            completed_sets=exercise_result[6],
-            is_completed=exercise_result[7],
-            created_at=exercise_result[8],
-            updated_at=exercise_result[9]
+            id=exercise_result['id'],
+            session_id=exercise_result['session_id'],
+            exercise_name=exercise_result['exercise_name'],
+            sets=exercise_result['sets'],
+            reps=exercise_result['reps'],
+            weight=exercise_result['weight'],
+            completed_sets=exercise_result['completed_sets'],
+            is_completed=exercise_result['is_completed'],
+            created_at=exercise_result['created_at'],
+            updated_at=exercise_result['updated_at']
         )
 
 @router.patch("/exercises/{exercise_id}/progress", response_model=WorkoutExerciseResponse)
@@ -230,7 +230,7 @@ async def update_exercise_progress(
         
         # Atualizar progresso
         completed_sets = progress_data.completed_sets
-        is_completed = completed_sets >= exercise[3]  # exercise[3] é o número de sets
+        is_completed = completed_sets >= exercise['sets']  # exercise['sets'] é o número de sets
         
         cursor.execute("""
             UPDATE workout_exercises 
@@ -258,16 +258,16 @@ async def update_exercise_progress(
             )
         
         return WorkoutExerciseResponse(
-            id=exercise_data[0],
-            session_id=exercise_data[1],
-            exercise_name=exercise_data[2],
-            sets=exercise_data[3],
-            reps=exercise_data[4],
-            weight=exercise_data[5],
-            completed_sets=exercise_data[6],
-            is_completed=exercise_data[7],
-            created_at=exercise_data[8],
-            updated_at=exercise_data[9]
+            id=exercise_data['id'],
+            session_id=exercise_data['session_id'],
+            exercise_name=exercise_data['exercise_name'],
+            sets=exercise_data['sets'],
+            reps=exercise_data['reps'],
+            weight=exercise_data['weight'],
+            completed_sets=exercise_data['completed_sets'],
+            is_completed=exercise_data['is_completed'],
+            created_at=exercise_data['created_at'],
+            updated_at=exercise_data['updated_at']
         )
 
 @router.get("/{session_id}/exercises", response_model=List[WorkoutExerciseResponse])
@@ -299,16 +299,16 @@ async def get_session_exercises(
         exercises = cursor.fetchall()
         return [
             WorkoutExerciseResponse(
-                id=ex[0],
-                session_id=ex[1],
-                exercise_name=ex[2],
-                sets=ex[3],
-                reps=ex[4],
-                weight=ex[5],
-                completed_sets=ex[6],
-                is_completed=ex[7],
-                created_at=ex[8],
-                updated_at=ex[9]
+                id=ex['id'],
+                session_id=ex['session_id'],
+                exercise_name=ex['exercise_name'],
+                sets=ex['sets'],
+                reps=ex['reps'],
+                weight=ex['weight'],
+                completed_sets=ex['completed_sets'],
+                is_completed=ex['is_completed'],
+                created_at=ex['created_at'],
+                updated_at=ex['updated_at']
             )
             for ex in exercises
         ]
