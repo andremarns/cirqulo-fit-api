@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 from datetime import datetime
 
-from app.infrastructure.database import get_db
+from app.infrastructure.database import db
 from app.application.workout_service import WorkoutService
 from app.application.schemas.workout import (
     WorkoutCreate, WorkoutResponse, WorkoutSessionCreate, WorkoutSessionResponse,

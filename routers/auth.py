@@ -4,10 +4,10 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from database import get_db
-from models import User
-from schemas import UserCreate, UserResponse, Token, UserLogin
-from config import settings
+from app.infrastructure.database import db
+from app.domain.entities import User
+from app.application.schemas.user import UserCreate, UserResponse, Token, UserLogin
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -30,18 +30,32 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
+def get_user_by_email(email: str):
+    with db.get_cursor() as cursor:
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user_data = cursor.fetchone()
+        if user_data:
+            return User(
+                id=user_data[0],
+                name=user_data[1],
+                email=user_data[2],
+                hashed_password=user_data[3],
+                gender=user_data[4],
+                is_active=user_data[5],
+                created_at=user_data[6],
+                updated_at=user_data[7]
+            )
+        return None
 
-def authenticate_user(db: Session, email: str, password: str):
-    user = get_user_by_email(db, email)
+def authenticate_user(email: str, password: str):
+    user = get_user_by_email(email)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
         return False
     return user
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -55,14 +69,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     except JWTError:
         raise credentials_exception
     
-    user = get_user_by_email(db, email=email)
+    user = get_user_by_email(email)
     if user is None:
         raise credentials_exception
     return user
 
 @router.post("/register", response_model=UserResponse)
-async def register(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = get_user_by_email(db, email=user.email)
+async def register(user: UserCreate):
+    db_user = get_user_by_email(user.email)
     if db_user:
         raise HTTPException(
             status_code=400,
@@ -70,20 +84,36 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
         )
     
     hashed_password = get_password_hash(user.password)
-    db_user = User(
-        name=user.name,
-        email=user.email,
-        hashed_password=hashed_password,
-        gender=user.gender
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+    
+    with db.get_cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO users (name, email, hashed_password, gender, is_active, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, name, email, gender, is_active, created_at, updated_at
+        """, (
+            user.name,
+            user.email,
+            hashed_password,
+            user.gender,
+            True,
+            datetime.utcnow(),
+            datetime.utcnow()
+        ))
+        
+        user_data = cursor.fetchone()
+        return UserResponse(
+            id=user_data[0],
+            name=user_data[1],
+            email=user_data[2],
+            gender=user_data[3],
+            is_active=user_data[4],
+            created_at=user_data[5],
+            updated_at=user_data[6]
+        )
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
