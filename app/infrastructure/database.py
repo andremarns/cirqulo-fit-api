@@ -1,16 +1,19 @@
 import psycopg2
 import psycopg2.extras
 from contextlib import contextmanager
+from urllib.parse import urlparse
 from app.core.config import settings
 
 class Database:
     def __init__(self):
+        # Parse da DATABASE_URL para extrair parâmetros de conexão
+        parsed_url = urlparse(settings.DATABASE_URL)
         self.connection_params = {
-            'host': 'db',
-            'port': 5432,
-            'database': 'cirqulofit',
-            'user': 'cirqulofit_user',
-            'password': 'cirqulofit_password'
+            'host': parsed_url.hostname,
+            'port': parsed_url.port or 5432,
+            'database': parsed_url.path[1:],  # Remove a barra inicial
+            'user': parsed_url.username,
+            'password': parsed_url.password
         }
     
     @contextmanager

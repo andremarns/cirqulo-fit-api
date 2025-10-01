@@ -27,9 +27,20 @@ app.add_middleware(
 
 # Inicializar tabelas
 try:
+    print("🔍 Inicializando banco de dados...")
     db.init_tables()
+    print("✅ Banco de dados inicializado com sucesso")
 except Exception as e:
-    print(f"Warning: Erro ao inicializar tabelas: {e}")
+    print(f"❌ Erro ao inicializar banco de dados: {e}")
+    print("🔧 Tentando criar tabelas com SQLAlchemy...")
+    try:
+        from create_tables import create_tables
+        if create_tables():
+            print("✅ Tabelas criadas com sucesso")
+        else:
+            print("❌ Falha ao criar tabelas")
+    except Exception as e2:
+        print(f"❌ Erro ao criar tabelas: {e2}")
 
 # Incluir routers apenas se estiverem disponíveis
 if ROUTERS_AVAILABLE:
@@ -45,3 +56,39 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/db-status")
+async def database_status():
+    """Endpoint para verificar status do banco de dados"""
+    try:
+        from app.infrastructure.database import db
+        from sqlalchemy import create_engine, text
+        from app.core.config import settings
+        
+        # Testar conexão
+        engine = create_engine(settings.DATABASE_URL)
+        with engine.connect() as conn:
+            # Verificar se as tabelas existem
+            result = conn.execute(text("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public'
+                ORDER BY table_name
+            """))
+            
+            tables = [row[0] for row in result]
+            
+            return {
+                "status": "connected",
+                "tables": tables,
+                "table_count": len(tables),
+                "has_users_table": "users" in tables
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "tables": [],
+            "table_count": 0,
+            "has_users_table": False
+        }
