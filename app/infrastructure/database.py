@@ -128,10 +128,52 @@ class Database:
                     level INTEGER DEFAULT 1
                 )
             """)
+            
+            # Tabela de sessões de treino
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS workout_sessions (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    workout_id INTEGER REFERENCES workouts(id),
+                    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    completed_at TIMESTAMP,
+                    duration INTEGER,
+                    xp_earned INTEGER DEFAULT 0,
+                    is_completed BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Tabela de exercícios da sessão
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS workout_exercises (
+                    id SERIAL PRIMARY KEY,
+                    session_id INTEGER REFERENCES workout_sessions(id),
+                    exercise_name VARCHAR(255) NOT NULL,
+                    sets INTEGER NOT NULL,
+                    reps INTEGER NOT NULL,
+                    weight DECIMAL(5,2) DEFAULT 0,
+                    completed_sets INTEGER DEFAULT 0,
+                    is_completed BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Tabela de dashboard data
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS dashboard_data (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id),
+                    weekly_goal INTEGER DEFAULT 5,
+                    total_sessions INTEGER DEFAULT 0,
+                    completion_rate DECIMAL(5,2) DEFAULT 0,
+                    streak_days INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
 
 # Instância global do database
 db = Database()
-
-# Dependency para obter conexão
-def get_db():
-    return db

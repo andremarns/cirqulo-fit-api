@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.infrastructure.database import db
 from app.core.config import settings
-from routers import auth, workouts, users, gifs
+from routers import auth, workouts, users, gifs, sessions, dashboard
 
 app = FastAPI(
     title="CirquloFit API",
@@ -25,6 +25,8 @@ db.init_tables()
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
+app.include_router(sessions.router, prefix="/api/workouts/sessions", tags=["sessions"])
+app.include_router(dashboard.router, prefix="/api/workouts/dashboard", tags=["dashboard"])
 app.include_router(gifs.router, prefix="/api/gifs", tags=["gifs"])
 
 @app.get("/")

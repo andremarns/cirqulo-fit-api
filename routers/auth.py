@@ -127,8 +127,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/login-json", response_model=Token)
-async def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
-    user = authenticate_user(db, login_data.email, login_data.password)
+async def login_json(login_data: UserLogin):
+    user = authenticate_user(login_data.email, login_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
