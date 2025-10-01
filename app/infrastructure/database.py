@@ -57,8 +57,15 @@ class Database:
                     hashed_password VARCHAR(255) NOT NULL,
                     gender VARCHAR(20) NOT NULL,
                     is_active BOOLEAN DEFAULT TRUE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            """)
+            
+            # Adicionar coluna updated_at se não existir
+            cursor.execute("""
+                ALTER TABLE users 
+                ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             """)
             
             # Tabela de treinos
