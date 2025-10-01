@@ -86,10 +86,10 @@ async def register(user: UserCreate):
     hashed_password = get_password_hash(user.password)
     
     with db.get_cursor() as cursor:
+        # Inserir usuário
         cursor.execute("""
             INSERT INTO users (name, email, hashed_password, gender, is_active, created_at, updated_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, name, email, gender, is_active, created_at, updated_at
         """, (
             user.name,
             user.email,
@@ -100,7 +100,20 @@ async def register(user: UserCreate):
             datetime.utcnow()
         ))
         
+        # Buscar o usuário criado
+        cursor.execute("""
+            SELECT id, name, email, gender, is_active, created_at, updated_at
+            FROM users 
+            WHERE email = %s
+        """, (user.email,))
+        
         user_data = cursor.fetchone()
+        if not user_data:
+            raise HTTPException(
+                status_code=500,
+                detail="Erro ao criar usuário"
+            )
+        
         return UserResponse(
             id=user_data[0],
             name=user_data[1],

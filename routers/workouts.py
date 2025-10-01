@@ -56,10 +56,10 @@ async def create_workout(
 ):
     """Criar novo treino"""
     with db.get_cursor() as cursor:
+        # Inserir treino
         cursor.execute("""
             INSERT INTO workouts (name, description, category, level, duration, exercises_count, xp_reward, user_id, is_active, created_at, updated_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, name, description, category, level, duration, exercises_count, xp_reward, user_id, is_active, created_at, updated_at
         """, (
             workout.name,
             workout.description,
@@ -74,7 +74,22 @@ async def create_workout(
             datetime.utcnow()
         ))
         
+        # Buscar o treino criado
+        cursor.execute("""
+            SELECT id, name, description, category, level, duration, exercises_count, xp_reward, user_id, is_active, created_at, updated_at
+            FROM workouts 
+            WHERE user_id = %s AND name = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (current_user.id, workout.name))
+        
         workout_data = cursor.fetchone()
+        if not workout_data:
+            raise HTTPException(
+                status_code=500,
+                detail="Erro ao criar treino"
+            )
+        
         return WorkoutResponse(
             id=workout_data[0],
             name=workout_data[1],

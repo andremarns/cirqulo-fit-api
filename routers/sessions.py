@@ -36,7 +36,6 @@ async def start_workout_session(
         cursor.execute("""
             INSERT INTO workout_sessions (user_id, workout_id, started_at, created_at, updated_at)
             VALUES (%s, %s, %s, %s, %s)
-            RETURNING id, user_id, workout_id, started_at, completed_at, duration, xp_earned, is_completed, created_at, updated_at
         """, (
             current_user.id,
             session_data.workout_id,
@@ -45,18 +44,33 @@ async def start_workout_session(
             datetime.utcnow()
         ))
         
-        session_data = cursor.fetchone()
+        # Buscar a sessão criada
+        cursor.execute("""
+            SELECT id, user_id, workout_id, started_at, completed_at, duration, xp_earned, is_completed, created_at, updated_at
+            FROM workout_sessions 
+            WHERE user_id = %s AND workout_id = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (current_user.id, session_data.workout_id))
+        
+        session_result = cursor.fetchone()
+        if not session_result:
+            raise HTTPException(
+                status_code=500,
+                detail="Erro ao criar sessão"
+            )
+        
         return WorkoutSessionResponse(
-            id=session_data[0],
-            user_id=session_data[1],
-            workout_id=session_data[2],
-            started_at=session_data[3],
-            completed_at=session_data[4],
-            duration=session_data[5],
-            xp_earned=session_data[6],
-            is_completed=session_data[7],
-            created_at=session_data[8],
-            updated_at=session_data[9]
+            id=session_result[0],
+            user_id=session_result[1],
+            workout_id=session_result[2],
+            started_at=session_result[3],
+            completed_at=session_result[4],
+            duration=session_result[5],
+            xp_earned=session_result[6],
+            is_completed=session_result[7],
+            created_at=session_result[8],
+            updated_at=session_result[9]
         )
 
 @router.patch("/{session_id}/complete", response_model=WorkoutSessionResponse)
@@ -95,7 +109,6 @@ async def complete_workout_session(
             UPDATE workout_sessions 
             SET completed_at = %s, duration = %s, xp_earned = %s, is_completed = true, updated_at = %s
             WHERE id = %s
-            RETURNING id, user_id, workout_id, started_at, completed_at, duration, xp_earned, is_completed, created_at, updated_at
         """, (
             completed_at,
             duration,
@@ -104,7 +117,20 @@ async def complete_workout_session(
             session_id
         ))
         
+        # Buscar a sessão atualizada
+        cursor.execute("""
+            SELECT id, user_id, workout_id, started_at, completed_at, duration, xp_earned, is_completed, created_at, updated_at
+            FROM workout_sessions 
+            WHERE id = %s
+        """, (session_id,))
+        
         session_data = cursor.fetchone()
+        if not session_data:
+            raise HTTPException(
+                status_code=500,
+                detail="Erro ao atualizar sessão"
+            )
+        
         return WorkoutSessionResponse(
             id=session_data[0],
             user_id=session_data[1],
@@ -141,7 +167,6 @@ async def add_exercise_to_session(
         cursor.execute("""
             INSERT INTO workout_exercises (session_id, exercise_name, sets, reps, weight, created_at, updated_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, session_id, exercise_name, sets, reps, weight, completed_sets, is_completed, created_at, updated_at
         """, (
             session_id,
             exercise_data.exercise_name,
@@ -152,18 +177,33 @@ async def add_exercise_to_session(
             datetime.utcnow()
         ))
         
-        exercise_data = cursor.fetchone()
+        # Buscar o exercício criado
+        cursor.execute("""
+            SELECT id, session_id, exercise_name, sets, reps, weight, completed_sets, is_completed, created_at, updated_at
+            FROM workout_exercises 
+            WHERE session_id = %s AND exercise_name = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (session_id, exercise_data.exercise_name))
+        
+        exercise_result = cursor.fetchone()
+        if not exercise_result:
+            raise HTTPException(
+                status_code=500,
+                detail="Erro ao criar exercício"
+            )
+        
         return WorkoutExerciseResponse(
-            id=exercise_data[0],
-            session_id=exercise_data[1],
-            exercise_name=exercise_data[2],
-            sets=exercise_data[3],
-            reps=exercise_data[4],
-            weight=exercise_data[5],
-            completed_sets=exercise_data[6],
-            is_completed=exercise_data[7],
-            created_at=exercise_data[8],
-            updated_at=exercise_data[9]
+            id=exercise_result[0],
+            session_id=exercise_result[1],
+            exercise_name=exercise_result[2],
+            sets=exercise_result[3],
+            reps=exercise_result[4],
+            weight=exercise_result[5],
+            completed_sets=exercise_result[6],
+            is_completed=exercise_result[7],
+            created_at=exercise_result[8],
+            updated_at=exercise_result[9]
         )
 
 @router.patch("/exercises/{exercise_id}/progress", response_model=WorkoutExerciseResponse)
@@ -196,7 +236,6 @@ async def update_exercise_progress(
             UPDATE workout_exercises 
             SET completed_sets = %s, is_completed = %s, updated_at = %s
             WHERE id = %s
-            RETURNING id, session_id, exercise_name, sets, reps, weight, completed_sets, is_completed, created_at, updated_at
         """, (
             completed_sets,
             is_completed,
@@ -204,7 +243,20 @@ async def update_exercise_progress(
             exercise_id
         ))
         
+        # Buscar o exercício atualizado
+        cursor.execute("""
+            SELECT id, session_id, exercise_name, sets, reps, weight, completed_sets, is_completed, created_at, updated_at
+            FROM workout_exercises 
+            WHERE id = %s
+        """, (exercise_id,))
+        
         exercise_data = cursor.fetchone()
+        if not exercise_data:
+            raise HTTPException(
+                status_code=500,
+                detail="Erro ao atualizar exercício"
+            )
+        
         return WorkoutExerciseResponse(
             id=exercise_data[0],
             session_id=exercise_data[1],
