@@ -12,5 +12,11 @@ class Settings:
     # GIPHY API para GIFs de exercícios
     GIPHY_API_KEY: str = os.getenv("GIPHY_API_KEY", "your-giphy-api-key")
     GIPHY_BASE_URL: str = "https://api.giphy.com/v1/gifs"
+    
+    # CORS Configuration
+    ALLOWED_ORIGINS: list = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+    
+    # Environment
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
 
 settings = Settings()

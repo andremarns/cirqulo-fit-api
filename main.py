@@ -1,7 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.infrastructure.database import db
-from routers import auth, workouts, users, gifs
+from app.core.config import settings
+
+# Importar routers apenas se as dependências estiverem disponíveis
+try:
+    from routers import auth, workouts, users, gifs
+    ROUTERS_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Routers não disponíveis: {e}")
+    ROUTERS_AVAILABLE = False
 
 app = FastAPI(
     title="CirquloFit API",
@@ -11,19 +19,24 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Inicializar tabelas
-db.init_tables()
+try:
+    db.init_tables()
+except Exception as e:
+    print(f"Warning: Erro ao inicializar tabelas: {e}")
 
-app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
-app.include_router(users.router, prefix="/api/users", tags=["users"])
-app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
-app.include_router(gifs.router, prefix="/api/gifs", tags=["gifs"])
+# Incluir routers apenas se estiverem disponíveis
+if ROUTERS_AVAILABLE:
+    app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+    app.include_router(users.router, prefix="/api/users", tags=["users"])
+    app.include_router(workouts.router, prefix="/api/workouts", tags=["workouts"])
+    app.include_router(gifs.router, prefix="/api/gifs", tags=["gifs"])
 
 @app.get("/")
 async def root():
