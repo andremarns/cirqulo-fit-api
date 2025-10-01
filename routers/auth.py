@@ -30,24 +30,33 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 def get_user_by_email(email: str):
-    with db.get_cursor() as cursor:
-        cursor.execute("""
-            SELECT id, name, email, hashed_password, gender, is_active, created_at, updated_at 
-            FROM users WHERE email = %s
-        """, (email,))
-        user_data = cursor.fetchone()
-        if user_data:
-            return User(
-                id=user_data['id'],
-                name=user_data['name'],
-                email=user_data['email'],
-                hashed_password=user_data['hashed_password'],
-                gender=user_data['gender'],
-                is_active=user_data['is_active'],
-                created_at=user_data['created_at'],
-                updated_at=user_data['updated_at']
-            )
-        return None
+    try:
+        print(f"DEBUG: Buscando usuário por email: {email}")
+        with db.get_cursor() as cursor:
+            print("DEBUG: Cursor obtido para busca de usuário")
+            cursor.execute("""
+                SELECT id, name, email, hashed_password, gender, is_active, created_at, updated_at 
+                FROM users WHERE email = %s
+            """, (email,))
+            user_data = cursor.fetchone()
+            print(f"DEBUG: Dados encontrados: {user_data}")
+            if user_data:
+                return User(
+                    id=user_data['id'],
+                    name=user_data['name'],
+                    email=user_data['email'],
+                    hashed_password=user_data['hashed_password'],
+                    gender=user_data['gender'],
+                    is_active=user_data['is_active'],
+                    created_at=user_data['created_at'],
+                    updated_at=user_data['updated_at']
+                )
+            return None
+    except Exception as e:
+        print(f"DEBUG: Erro em get_user_by_email: {str(e)}")
+        import traceback
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
+        raise
 
 def authenticate_user(email: str, password: str):
     user = get_user_by_email(email)
@@ -79,18 +88,27 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate):
     try:
+        print(f"DEBUG: Iniciando registro para {user.email}")
+        
         # Verificar se usuário já existe
+        print("DEBUG: Verificando se usuário já existe")
         db_user = get_user_by_email(user.email)
         if db_user:
+            print("DEBUG: Usuário já existe")
             raise HTTPException(
                 status_code=400,
                 detail="Email already registered"
             )
         
+        print("DEBUG: Usuário não existe, criando hash da senha")
         hashed_password = get_password_hash(user.password)
         
+        print("DEBUG: Iniciando transação de banco")
         with db.get_cursor() as cursor:
+            print("DEBUG: Cursor obtido com sucesso")
+            
             # Inserir usuário
+            print("DEBUG: Inserindo usuário no banco")
             cursor.execute("""
                 INSERT INTO users (name, email, hashed_password, gender, is_active, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -103,35 +121,45 @@ async def register(user: UserCreate):
                 datetime.utcnow(),
                 datetime.utcnow()
             ))
+            print("DEBUG: Usuário inserido com sucesso")
             
             # Buscar o usuário criado
+            print("DEBUG: Buscando usuário criado")
             cursor.execute("""
                 SELECT id, name, email, gender, is_active, created_at, updated_at
                 FROM users 
                 WHERE email = %s
             """, (user.email,))
             
-        user_data = cursor.fetchone()
-        
-        if not user_data:
-            raise HTTPException(
-                status_code=500,
-                detail="Erro ao criar usuário"
+            user_data = cursor.fetchone()
+            print(f"DEBUG: Dados do usuário: {user_data}")
+            
+            if not user_data:
+                print("DEBUG: Usuário não encontrado após inserção")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Erro ao criar usuário"
+                )
+            
+            print("DEBUG: Retornando resposta de sucesso")
+            return UserResponse(
+                id=user_data['id'],
+                name=user_data['name'],
+                email=user_data['email'],
+                gender=user_data['gender'],
+                is_active=user_data['is_active'],
+                created_at=user_data['created_at'],
+                updated_at=user_data['updated_at']
             )
-        
-        return UserResponse(
-            id=user_data['id'],
-            name=user_data['name'],
-            email=user_data['email'],
-            gender=user_data['gender'],
-            is_active=user_data['is_active'],
-            created_at=user_data['created_at'],
-            updated_at=user_data['updated_at']
-        )
     
     except HTTPException:
+        print("DEBUG: HTTPException capturada")
         raise
     except Exception as e:
+        print(f"DEBUG: Exception capturada: {str(e)}")
+        print(f"DEBUG: Tipo da exception: {type(e)}")
+        import traceback
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=500,
             detail=f"Erro interno do servidor: {str(e)}"

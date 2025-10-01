@@ -17,33 +17,24 @@ class Database:
         }
     
     @contextmanager
-    def get_connection(self):
-        """Context manager para conexão com o banco"""
+    def get_cursor(self):
+        """Context manager para cursor do banco"""
         conn = None
+        cursor = None
         try:
             conn = psycopg2.connect(**self.connection_params)
-            yield conn
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            yield cursor
+            conn.commit()
         except Exception as e:
             if conn:
                 conn.rollback()
             raise e
         finally:
+            if cursor:
+                cursor.close()
             if conn:
                 conn.close()
-    
-    @contextmanager
-    def get_cursor(self):
-        """Context manager para cursor do banco"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            try:
-                yield cursor
-                conn.commit()
-            except Exception as e:
-                conn.rollback()
-                raise e
-            finally:
-                cursor.close()
     
     def init_tables(self):
         """Criar tabelas se não existirem"""
