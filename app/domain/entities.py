@@ -8,14 +8,17 @@ class GenderEnum(str, Enum):
     OTHER = "other"
 
 class User:
-    def __init__(self, id: int, name: str, email: str, gender: GenderEnum, 
-                 is_active: bool = True, created_at: Optional[datetime] = None):
+    def __init__(self, id: int, name: str, email: str, gender: str, 
+                 hashed_password: str = None, is_active: bool = True, 
+                 created_at: Optional[datetime] = None, updated_at: Optional[datetime] = None):
         self.id = id
         self.name = name
         self.email = email
         self.gender = gender
+        self.hashed_password = hashed_password
         self.is_active = is_active
         self.created_at = created_at or datetime.utcnow()
+        self.updated_at = updated_at
         
         # Relacionamentos
         self.workouts: List['Workout'] = []
@@ -26,7 +29,7 @@ class Workout:
     def __init__(self, id: int, name: str, user_id: int, description: Optional[str] = None,
                  category: str = "mixed", level: int = 1, duration: Optional[int] = None,
                  exercises_count: int = 0, xp_reward: int = 0, is_active: bool = True, 
-                 created_at: Optional[datetime] = None):
+                 created_at: Optional[datetime] = None, updated_at: Optional[datetime] = None):
         self.id = id
         self.name = name
         self.user_id = user_id
@@ -38,6 +41,7 @@ class Workout:
         self.xp_reward = xp_reward
         self.is_active = is_active
         self.created_at = created_at or datetime.utcnow()
+        self.updated_at = updated_at
         
         # Relacionamentos
         self.sessions: List['WorkoutSession'] = []
@@ -57,7 +61,8 @@ class Exercise:
 class WorkoutSession:
     def __init__(self, id: int, user_id: int, workout_id: int, started_at: Optional[datetime] = None,
                  completed_at: Optional[datetime] = None, duration: Optional[int] = None,
-                 xp_earned: int = 0, is_completed: bool = False):
+                 xp_earned: int = 0, is_completed: bool = False, 
+                 created_at: Optional[datetime] = None, updated_at: Optional[datetime] = None):
         self.id = id
         self.user_id = user_id
         self.workout_id = workout_id
@@ -66,6 +71,8 @@ class WorkoutSession:
         self.duration = duration
         self.xp_earned = xp_earned
         self.is_completed = is_completed
+        self.created_at = created_at or datetime.utcnow()
+        self.updated_at = updated_at
         
         # Relacionamentos
         self.exercises: List['WorkoutExercise'] = []
@@ -85,7 +92,8 @@ class ExerciseSet:
 
 class WorkoutExercise:
     def __init__(self, id: int, session_id: int, exercise_name: str, sets: int, reps: int,
-                 weight: int = 0, completed_sets: int = 0, is_completed: bool = False):
+                 weight: float = 0.0, completed_sets: int = 0, is_completed: bool = False,
+                 created_at: Optional[datetime] = None, updated_at: Optional[datetime] = None):
         self.id = id
         self.session_id = session_id
         self.exercise_name = exercise_name
@@ -94,6 +102,8 @@ class WorkoutExercise:
         self.weight = weight
         self.completed_sets = completed_sets
         self.is_completed = is_completed
+        self.created_at = created_at or datetime.utcnow()
+        self.updated_at = updated_at
 
 class UserProgress:
     def __init__(self, id: int, user_id: int, date: datetime, total_workouts: int = 0,
